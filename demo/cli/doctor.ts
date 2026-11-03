@@ -5,6 +5,7 @@ import type { MonitorState } from '../../monitor/state.ts';
 import { slackApi, type SlackResult } from '../../monitor/slack.ts';
 import { ciJobName } from '../deploy/ci.ts';
 import { ghJson, gh, describeGhError, repoFromRemoteUrl, repoPattern, sameRepo } from '../lib/gh.ts';
+import { deployKeySshArgs, sshGreetingName } from '../lib/git-remote.ts';
 import { readJsonFile } from '../lib/json.ts';
 import { files, repoRoot, valuesFile } from '../lib/paths.ts';
 import { isOurs, listenerPids, run } from '../lib/proc.ts';
@@ -174,7 +175,7 @@ function buildChecks(loaded: LoadedValues): Check[] {
       run: async () => {
         const notInFile = valueKeys.filter((key) => !loaded.fileKeys.includes(key));
         if (loaded.missing.length > 0) {
-          const waiting = loaded.missing.includes('RUN_IDENTITY') ? ' (RUN_IDENTITY waits on the P5 decision)' : '';
+          const waiting = loaded.missing.includes('RUN_IDENTITY') ? ' (RUN_IDENTITY: SETUP.md P5)' : '';
           return fail(`empty: ${loaded.missing.join(', ')}${waiting}`, 'fill these in demo/.env (see values.example.env)');
         }
         return pass(notInFile.length ? `all set; defaults used for ${notInFile.join(', ')}` : 'all set');
@@ -355,7 +356,15 @@ function buildChecks(loaded: LoadedValues): Check[] {
         const match = keys.value.find((entry) => entry.key.trim() === pub);
         if (!match) return fail(`${key}.pub is not a deploy key on ${R}`, `gh repo deploy-key add ${key}.pub -R ${R} --allow-write --title "demo reset"`);
         if (match.read_only) return fail(`deploy key "${match.title}" is read-only`, 'delete it and add it again with --allow-write');
-        return pass(`deploy key "${match.title}" can write; only this laptop holds it`);
+        const hello = await run('ssh', [...deployKeySshArgs(key), '-T', 'git@github.com'], { timeoutMs: 15_000 });
+        const signedInAs = sshGreetingName(`${hello.stderr}\n${hello.stdout}`);
+        if (!signedInAs) {
+          return fail(`ssh with ${key} did not sign in to GitHub: ${(hello.stderr || hello.stdout).trim().split('\n')[0] ?? ''}`, `ssh ${deployKeySshArgs(key).join(' ')} -T git@github.com`);
+        }
+        if (!sameRepo(signedInAs, R)) {
+          return fail(`${key} signs in as ${signedInAs}, not as the deploy key of ${R}, so GitHub would refuse the reset push`, `ssh ${deployKeySshArgs(key).join(' ')} -T git@github.com should say "Hi ${R}!"`);
+        }
+        return pass(`deploy key "${match.title}" can write and signs in as ${R}; only this laptop holds it`);
       },
     },
     {
@@ -385,7 +394,7 @@ function buildChecks(loaded: LoadedValues): Check[] {
     {
       phase: 'P4',
       name: 'Factory Demos can reach the repo',
-      run: async () => manual('confirm in Factory Demos: Settings, Integrations, GitHub lists ' + R + ' (waits on the GitHub connection decision)'),
+      run: async () => manual(`confirm in Factory Demos: Settings, Integrations, GitHub lists ${R}`),
     },
     // P5 run identity and Environment
     {
@@ -394,9 +403,9 @@ function buildChecks(loaded: LoadedValues): Check[] {
       run: async () =>
         v.RUN_IDENTITY
           ? pass(`RUN_IDENTITY=${v.RUN_IDENTITY}`)
-          : fail('RUN_IDENTITY is empty', 'write invoice-oncall or org-default into demo/.env once the run identity is decided'),
+          : fail('RUN_IDENTITY is empty', 'write the service account name into demo/.env, for example RUN_IDENTITY=factory-demos (SETUP.md P5)'),
     },
-    { phase: 'P5', name: 'Environment for the repo', run: async () => manual('confirm in Factory Demos: an Environment for ' + R + ' whose setup runs npm ci') },
+    { phase: 'P5', name: 'Environment for the repo', run: async () => manual('confirm in Factory Demos: an Organization Environment for ' + R + ', Ready, with node --version && npm ci in the repository setup script, rebuilt after the last demo-baseline move') },
     // P6 automation
     {
       phase: 'P6',
@@ -416,8 +425,8 @@ function buildChecks(loaded: LoadedValues): Check[] {
     },
     {
       phase: 'P6',
-      name: 'Automation "Invoice alerts"',
-      run: async () => manual('confirm in Factory Demos: Incident Response template, both channels, bot messages on, keyword FIRING, runs as ' + (v.RUN_IDENTITY || 'the chosen identity') + ', model set, prompt as in SETUP.md P6'),
+      name: 'Automation "Invoice Alerts"',
+      run: async () => manual('confirm in Factory Demos: both channels, keyword FIRING, runs as ' + (v.RUN_IDENTITY || 'the service account') + ' on the P5 Environment, session privacy Team, model set, working directory /home/factory-user/repos/invoice-service, prompt as in SETUP.md P6'),
     },
     // P7 local loop
     { phase: 'P7', name: 'Staging port free or ours', run: portCheck('STAGING_PORT', v.STAGING_PORT) },

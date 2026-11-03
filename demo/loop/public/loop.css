@@ -199,7 +199,8 @@ a { color: inherit; text-decoration: none; }
   left: 920px;
   top: 520px;
   translate: -50% -50%;
-  max-width: 1080px;
+  /* The straight part of the bottom track runs from x 160 to 1680 (1520 px); the pill stays inside it. */
+  max-width: 1440px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -215,7 +216,7 @@ a { color: inherit; text-decoration: none; }
 .t-dot { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--orange); }
 /* Answer and time share one line, and the open pill sits a little higher, so it clears the cards. */
 .lp-new[data-open='true'] { top: 502px; }
-.lp-new-row { display: flex; align-items: baseline; gap: 24px; max-width: 1000px; }
+.lp-new-row { display: flex; align-items: baseline; gap: 24px; max-width: 1366px; }
 .lp-new-row:has(.lp-new-a:empty):has(.lp-new-t:empty) { display: none; }
 .lp-new-a { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 32px; line-height: 40px; color: var(--ink); }
 .lp-new-t { flex: none; font-family: var(--mono); font-size: 32px; line-height: 40px; color: var(--label); }

@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import { appendEvent } from '../lib/events.ts';
-import { describeGhError, gh, ghJson, repoPattern } from '../lib/gh.ts';
+import { ghJson, repoPattern } from '../lib/gh.ts';
+import { githubHttpsUrl, remoteBranchSha } from '../lib/git-remote.ts';
 import { sleep } from '../lib/proc.ts';
 import { baselineCurrencies, deployStaging, readStaging } from '../lib/staging.ts';
 import { loadValues } from '../lib/values.ts';
@@ -8,8 +9,9 @@ import { ciJobName, decideDeploy, type CheckRun } from './ci.ts';
 
 const help = `Usage: node demo/deploy/watch.ts [--interval SECONDS] [--once] [--dry-run]
 
-Watches main on GITHUB_REPO with read-only gh calls. For each new commit it
-waits until the CI job "${ciJobName}" has succeeded on that commit, then puts
+Watches main on GITHUB_REPO with git ls-remote, which uses no GitHub API calls.
+Only when main has moved past staging does it read CI with gh. For each new
+commit it waits until the CI job "${ciJobName}" has succeeded on that commit, then puts
 that commit on staging, restarts it with staging's current BILLING_CURRENCIES,
 and appends deploy_started and deploy_done. A commit whose CI failed, was
 cancelled or is still running is never deployed.
@@ -48,14 +50,12 @@ function log(message: string): void {
 }
 
 async function mainSha(): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
-  const result = await gh(['api', `repos/${repo}/commits/main`, '--jq', '.sha'], 15_000);
-  const sha = result.stdout.trim();
-  if (result.code === 0 && /^[0-9a-f]{40}$/.test(sha)) return { ok: true, sha };
-  const reason = describeGhError(`${result.stderr}\n${result.stdout}`, result);
-  if (/not found/i.test(reason)) {
+  const main = await remoteBranchSha(githubHttpsUrl(repo), 'main');
+  if (main.ok) return main;
+  if (main.missing || /^not found/.test(main.error)) {
     return { ok: false, error: `github.com/${repo} has no main branch yet (no remote yet); nothing to deploy. See SETUP.md P3.` };
   }
-  return { ok: false, error: `cannot read main on github.com/${repo}: ${reason}` };
+  return { ok: false, error: `cannot read main on github.com/${repo}: ${main.error}` };
 }
 
 async function tick(): Promise<void> {
@@ -65,6 +65,11 @@ async function tick(): Promise<void> {
     return;
   }
   const staging = readStaging();
+  // Checked before reading CI so an idle watcher makes no API calls at all.
+  if (main.sha === staging?.sha) {
+    log(`staging is at main (${main.sha.slice(0, 7)})`);
+    return;
+  }
   const runs = await ghJson<{ check_runs: CheckRun[] }>(
     ['api', `repos/${repo}/commits/${main.sha}/check-runs?check_name=${encodeURIComponent(ciJobName)}&per_page=50`],
     15_000,

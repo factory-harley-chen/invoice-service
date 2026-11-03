@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path';
 import { appendEvent } from '../lib/events.ts';
 import { gh, ghJson, repoFromRemoteUrl, repoPattern, sameRepo } from '../lib/gh.ts';
+import { deployKeySshCommand, githubHttpsUrl, remoteBranchSha } from '../lib/git-remote.ts';
 import { files, repoRoot } from '../lib/paths.ts';
 import { run } from '../lib/proc.ts';
 import { processNames, readSession, runningProcesses, startProcess, stopProcess, writeSession, type ProcessName } from '../lib/session.ts';
@@ -84,17 +85,17 @@ async function githubSteps(v: Values, options: ResetOptions, say: (line: string)
     say('GitHub: no local demo-baseline tag; main is left as it is (SETUP.md P3)');
     return false;
   }
-  const main = await ghJson<{ sha: string }>(['api', `repos/${R}/commits/main`]);
+  const main = await remoteBranchSha(githubHttpsUrl(R), 'main');
   if (!main.ok) {
     say(`GitHub: cannot read main: ${main.error}`);
     return false;
   }
-  if (main.value.sha === base.sha) {
+  if (main.sha === base.sha) {
     say(`GitHub: main is already at demo-baseline (${base.sha.slice(0, 7)})`);
     return ok;
   }
   const key = v.RESET_DEPLOY_KEY;
-  say(`GitHub: ${would}force-push demo-baseline (${base.sha.slice(0, 7)}) to main (now ${main.value.sha.slice(0, 7)}) on github.com/${R}, with the deploy key ${key}`);
+  say(`GitHub: ${would}force-push demo-baseline (${base.sha.slice(0, 7)}) to main (now ${main.sha.slice(0, 7)}) on github.com/${R}, with the deploy key ${key}`);
   if (!act) return ok;
   if (!existsSync(key)) {
     say(`  failed: no deploy key at ${key} (SETUP.md P3)`);
@@ -102,11 +103,11 @@ async function githubSteps(v: Values, options: ResetOptions, say: (line: string)
   }
   const pushed = await run(
     'git',
-    ['push', `--force-with-lease=refs/heads/main:${main.value.sha}`, `git@github.com:${R}.git`, `${base.sha}:refs/heads/main`],
+    ['push', `--force-with-lease=refs/heads/main:${main.sha}`, `git@github.com:${R}.git`, `${base.sha}:refs/heads/main`],
     {
       cwd: repoRoot,
       timeoutMs: 30_000,
-      env: { ...process.env, GIT_SSH_COMMAND: `ssh -i "${key}" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new` },
+      env: { ...process.env, GIT_SSH_COMMAND: deployKeySshCommand(key) },
     },
   );
   if (pushed.code !== 0) {

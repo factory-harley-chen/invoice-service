@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { ghApiToFile } from './gh.ts';
+import { fetchCommit, githubHttpsUrl } from './git-remote.ts';
 import { readJsonFile, writeJsonFile } from './json.ts';
 import { files, repoRoot, statePath } from './paths.ts';
 import { isOurs, listenerPids, run, startNode, stopPid, waitFor } from './proc.ts';
@@ -51,6 +51,15 @@ export async function baselineSource(): Promise<StagingSource> {
   return result.code === 0 && sha ? { kind: 'tag', sha } : { kind: 'worktree' };
 }
 
+async function extract(gitArgs: string[], sha: string, dir: string): Promise<void> {
+  const tar = statePath('staging-next.tar');
+  const archived = await run('git', [...gitArgs, 'archive', '--format=tar', '-o', tar, sha, 'src', 'config', 'package.json'], { cwd: repoRoot });
+  if (archived.code !== 0) throw new Error(`git archive ${sha} failed: ${archived.stderr.trim()}`);
+  const extracted = await run('tar', ['-xf', tar, '-C', dir]);
+  rmSync(tar, { force: true });
+  if (extracted.code !== 0) throw new Error(`tar failed: ${extracted.stderr.trim()}`);
+}
+
 async function prepare(source: StagingSource, dir: string): Promise<void> {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
@@ -59,19 +68,11 @@ async function prepare(source: StagingSource, dir: string): Promise<void> {
       cpSync(join(repoRoot, part), join(dir, part), { recursive: true });
     }
   } else if (source.kind === 'tag') {
-    const tar = statePath('staging-next.tar');
-    const archived = await run('git', ['archive', '--format=tar', '-o', tar, source.sha, 'src', 'config', 'package.json'], { cwd: repoRoot });
-    if (archived.code !== 0) throw new Error(`git archive ${source.sha} failed: ${archived.stderr.trim()}`);
-    const extracted = await run('tar', ['-xf', tar, '-C', dir]);
-    rmSync(tar, { force: true });
-    if (extracted.code !== 0) throw new Error(`tar failed: ${extracted.stderr.trim()}`);
+    await extract([], source.sha, dir);
   } else {
-    const tgz = statePath('staging-next.tgz');
-    const downloaded = await ghApiToFile(`repos/${source.repo}/tarball/${source.sha}`, tgz);
-    if (!downloaded.ok) throw new Error(`download of ${source.sha} failed: ${downloaded.error}`);
-    const extracted = await run('tar', ['-xzf', tgz, '--strip-components=1', '-C', dir]);
-    rmSync(tgz, { force: true });
-    if (extracted.code !== 0) throw new Error(`tar failed: ${extracted.stderr.trim()}`);
+    const fetched = await fetchCommit(githubHttpsUrl(source.repo), source.sha);
+    if (!fetched.ok) throw new Error(`download of ${source.sha} failed: ${fetched.error}`);
+    await extract(['--git-dir', fetched.gitDir], source.sha, dir);
   }
   if (!existsSync(join(dir, 'src', 'server.ts'))) {
     throw new Error(`${describeSource(source)} has no src/server.ts`);

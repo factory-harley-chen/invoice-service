@@ -1,6 +1,3 @@
-import { spawn } from 'node:child_process';
-import { createWriteStream, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { run, type RunResult } from './proc.ts';
 
 const ghEnv = (): NodeJS.ProcessEnv => ({ ...process.env, GH_PROMPT_DISABLED: '1', GH_NO_UPDATE_NOTIFIER: '1', NO_COLOR: '1' });
@@ -48,29 +45,6 @@ function firstLine(text: string): string {
       .map((line) => line.trim())
       .find((line) => line.length > 0) ?? ''
   );
-}
-
-/** Streams `gh api <path>` (for example a tarball) into a file. */
-export function ghApiToFile(path: string, file: string, timeoutMs = 60_000): Promise<{ ok: boolean; error: string }> {
-  mkdirSync(dirname(file), { recursive: true });
-  return new Promise((resolve) => {
-    const out = createWriteStream(file);
-    const child = spawn('gh', ['api', path], { env: ghEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
-    let stderr = '';
-    const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
-    child.stdout.pipe(out);
-    child.stderr.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
-    child.on('error', (error) => {
-      clearTimeout(timer);
-      resolve({ ok: false, error: error.message });
-    });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      out.end(() => resolve({ ok: code === 0, error: code === 0 ? '' : describeGhError(stderr) }));
-    });
-  });
 }
 
 /** owner/name from a GitHub remote URL, or undefined when it is not a GitHub URL. */

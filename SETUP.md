@@ -42,7 +42,7 @@ Everything the scripts need is in `demo/.env` (git-ignored). The template is
 | `GITHUB_REPO` | `factory-harley-chen/invoice-service` |
 | `OWNER_LOGIN` | `factory-harley-chen`, the code owner who approves. |
 | `BOT_LOGIN` | `factory-droid[bot]`, the author of the run's pull requests. |
-| `RUN_IDENTITY` | `invoice-oncall` or `org-default`. Undecided (P5). |
+| `RUN_IDENTITY` | The service account the run acts as, as the automation form names it: `factory-demos` (P5). |
 | `STAGING_PORT` | `4100` |
 | `LOOP_PORT` | `4200` |
 | `DEMO_MODE` | `rehearsal` or `live`. |
@@ -156,10 +156,19 @@ GitHub write to a public repo: confirm with the person first.
 7. Seeded issues: `node demo/cli/seed-issues.ts` (`--dry-run` first).
 8. The code owners file `.github/CODEOWNERS` is already `* @factory-harley-chen`.
 
-Changing the baseline later (new tooling, a better skill): merge the change to
-`main` through a pull request, then move the tag:
-`git fetch origin && git tag -f demo-baseline origin/main && git push -f origin demo-baseline`.
-Anything on `main` that is not in `demo-baseline` is removed by the next reset.
+Changing the baseline later (new tooling, a better skill): a pull request does
+not work for your own change, because GitHub does not let the author approve
+his own pull request and the code owner is the only approver. Commit on `main`,
+run `npm run check`, push with the reset deploy key (the ruleset's one bypass
+actor), and move the tag once CI on the new commit is green:
+```sh
+GIT_SSH_COMMAND='ssh -F /dev/null -o IdentityAgent=none -o IdentitiesOnly=yes -i ~/.ssh/invoice-service-reset' \
+  git push git@github.com:factory-harley-chen/invoice-service.git main
+git fetch origin && git tag -f demo-baseline origin/main && git push -f origin demo-baseline
+```
+Then rebuild the Environment (P5) and restart the local processes
+(`./demo.sh reset --yes`). Anything on `main` that is not in `demo-baseline` is
+removed by the next reset.
 
 Check: `./demo.sh doctor --phase P3`
 
@@ -170,8 +179,7 @@ Who: the person (Factory web pages).
 1. Switch to the Factory Demos organization.
 2. Connect GitHub so runs can reach `factory-harley-chen/invoice-service`
    (Settings, Integrations, GitHub; install the app on the
-   `factory-harley-chen` account, this repo only). **Waits on a decision:**
-   whether Harley's GitHub account can be connected to Factory Demos.
+   `factory-harley-chen` account, this repo only).
 3. Confirm the Slack integration is the factory-gtm workspace.
 4. Create an API key for Factory Demos, then save it as the repo secret the
    review workflow uses. The person pastes it at the hidden prompt:
@@ -184,30 +192,52 @@ connection is MANUAL).
 
 ## P5 run identity and Environment
 
-Who: the person (Factory web pages). **Waits on the same decision as P4.**
+Who: the person (Factory web pages).
 
-1. Run identity: either a service account `invoice-oncall`, or the Factory
-   Demos default service account. Write the choice into `demo/.env` as
-   `RUN_IDENTITY=invoice-oncall` or `RUN_IDENTITY=org-default`.
-2. An Environment for `factory-harley-chen/invoice-service` whose setup runs
-   `npm ci`.
+1. Run identity: the Factory Demos default service account, `factory-demos`.
+   Slack automations run as a service account, and the pull request author
+   must not be the code owner, who can't approve their own pull request.
+   Write the name as the automation form shows it into `demo/.env`, for
+   example `RUN_IDENTITY=factory-demos`; the loop screen's record card shows
+   it.
+2. An Environment for `factory-harley-chen/invoice-service`:
+   - Create it for the organization (Settings, Environments), so the list
+     shows it as "Organization". A personal Environment is hidden from a
+     service account.
+   - Put `node --version && npm ci` in the repository's own setup script, not
+     the environment-wide one. The environment-wide script runs in the home
+     folder (`/home/factory-user`), which has no lockfile, so `npm ci` fails
+     there. The repository is cloned to
+     `/home/factory-user/repos/invoice-service`.
+   - Wait until it is Ready. It clones `main` when it builds, so rebuild it
+     after every move of `demo-baseline`.
 
-Check: `./demo.sh doctor --phase P5`
+Check: `./demo.sh doctor --phase P5` (the Environment is MANUAL).
 
-## P6 the automation "Invoice alerts"
+## P6 the automation "Invoice Alerts"
 
 Who: the person (Factory web pages).
 
-Create a custom automation named "Invoice alerts":
+Create a Slack automation named "Invoice Alerts":
 
-- Template: Incident Response.
+- Template: none needed. If you start from Incident Response, replace its
+  prompt with the one below.
 - Trigger: Slack messages in both channels (`SLACK_CHANNEL_LIVE` and
-  `SLACK_CHANNEL_REHEARSAL`), including messages from bots, with the keyword
-  `FIRING`. Only new messages start a run; thread replies (such as RESOLVED)
-  do not.
-- Runs as: `RUN_IDENTITY` from P5.
-- Environment: the one from P5.
-- Model: set it explicitly (the one agreed in the build spec), not left on a default.
+  `SLACK_CHANNEL_REHEARSAL`). Message source Bots is the safest. Anyone also
+  works in channels only the demo team uses, but then a person's message that
+  contains "firing" starts a run too.
+- Where: "Run as service account" `RUN_IDENTITY` from P5, "Run on" the
+  Environment from P5. If the form offers "Run on organization default
+  computer and service account", choose "Configure your own computer and
+  identity settings" instead: the default runs on the organization's default
+  environment, not this one.
+- Session privacy: Team, so the code owner can open the run's session.
+- Model: set it explicitly, not left on a default. The rehearsals used Opus
+  5.5 Fast Mode.
+- Additional settings (the last step): keyword `FIRING` (matched anywhere in
+  the message, in any case); working directory
+  `/home/factory-user/repos/invoice-service`; no exclusions. Only new
+  messages start a run; thread replies (such as RESOLVED) do not.
 - Prompt, word for word:
 
 ```text
@@ -256,7 +286,7 @@ Pass list for the first rehearsal (from the plan's smoke tests):
 | # | Test | Pass |
 | --- | --- | --- |
 | S1 | A FIRING post in the rehearsal channel | Exactly one run starts, in the demo org |
-| S2 | Identity | Runs as `invoice-oncall`; the PR author is `factory-droid[bot]` |
+| S2 | Identity | Runs as `RUN_IDENTITY` (`factory-demos`); the PR author is `factory-droid[bot]` |
 | S3 | Environment | It clones, installs and passes the tests. Time to the first reply is logged |
 | S4 | What the skill produces | Triage note, evidence, approval request and second PR |
 | S5 | Checks | CI and both reviews run on the bot's PR. Note who signs the review |
@@ -266,8 +296,6 @@ Pass list for the first rehearsal (from the plan's smoke tests):
 | S9 | Reset | Back to baseline in under 60 s, and `doctor` passes |
 | S13 | Loop screen accuracy | Each lit station matches its real event within 5 s |
 
-S2 names `invoice-oncall`; if P5 chooses the org default service account,
-check that identity instead.
 
 ## Commands
 
