@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The loop</title>
+    <link rel="stylesheet" href="/loop.css" />
+  </head>
+  <body>
+    <main id="stage" class="stage" data-loop="idle">
+      <header class="top">
+        <div id="banner" class="banner" data-kind="none">Connecting</div>
+        <div id="sources" class="sources" aria-live="polite"></div>
+      </header>
+
+      <div id="clock" class="clock" data-phase="idle">Connecting</div>
+
+      <section class="lp" aria-label="The loop">
+        <svg class="lp-track" viewBox="0 0 1840 560" aria-hidden="true">
+          <path d="M160 40 H1680 A120 120 0 0 1 1800 160 V400 A120 120 0 0 1 1680 520 H160 A120 120 0 0 1 40 400 V160 A120 120 0 0 1 160 40 Z" />
+          <polygon points="336,31 352,40 336,49" />
+          <polygon points="624,31 640,40 624,49" />
+          <polygon points="912,31 928,40 912,49" />
+          <polygon points="1200,31 1216,40 1200,49" />
+          <polygon points="1488,31 1504,40 1488,49" />
+          <polygon points="1792,272 1800,288 1808,272" />
+          <polygon points="1504,511 1488,520 1504,529" />
+          <polygon points="352,511 336,520 352,529" />
+          <polygon points="32,288 40,272 48,288" />
+        </svg>
+        <div id="stations"></div>
+        <a id="left" class="lp-new" data-status="idle" target="_blank" rel="noopener">
+          <span class="lp-new-q"><span class="t-dot"></span><span>What did it leave behind?</span></span>
+          <span class="lp-new-row"><span id="left-answer" class="lp-new-a"></span><span id="left-time" class="lp-new-t"></span></span>
+        </a>
+      </section>
+
+      <section class="cards">
+        <a id="invoice" class="card invoice" target="_blank" rel="noopener" data-state="none">
+          <div class="card-label">Invoice</div>
+          <div id="invoice-line" class="invoice-line">Shown when an alert fires</div>
+          <div class="amounts">
+            <span id="invoice-expected" class="amount expected"></span>
+            <span id="invoice-actual" class="amount actual"></span>
+            <span id="invoice-was" class="amount was"></span>
+          </div>
+        </a>
+        <div id="record" class="card record">
+          <div class="card-label">Record</div>
+          <dl id="record-rows"></dl>
+        </div>
+      </section>
+    </main>
+    <script src="/loop.js"></script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+[
+  {
+    "title": "Roll out JPY billing",
+    "body": "Customers based in Japan, starting with Sakura Lane Design, have asked to be invoiced in yen instead of euros.\n\nThe rate card already has JPY prices for the Kyoto hotel and the Kyoto station transfer. JPY is turned on per environment by adding it to `BILLING_CURRENCIES`; no code change is planned.\n\nPlan:\n- [ ] Turn JPY on in staging and look over the invoices for JPY customers\n- [ ] Tell finance the date it goes live\n- [ ] Turn JPY on in production\n\nUntil then these customers keep getting invoices in EUR (the fallback currency)."
+  },
+  {
+    "title": "Add CHF prices for the Zurich hotel",
+    "body": "Sales has signed a hotel in Zurich. We need it on the rate card with EUR and CHF prices, and CHF added to the currency table so it can be enabled later.\n\nNot urgent: the first bookings are expected next quarter."
+  },
+  {
+    "title": "Question: rounding of line totals in the finance export",
+    "body": "Finance asked whether the monthly export rounds each line or only the invoice total. Their spreadsheet is a cent out on two invoices from last month, both with transfers priced at 18.50.\n\nCan someone confirm which rule the export uses and add it to `docs/service.md`?"
+  },
+  {
+    "title": "Show the stay dates on each invoice line",
+    "body": "Customers have asked to see the check-in and check-out dates next to each hotel line, so they can match invoices to trips without opening the booking."
+  }
+]

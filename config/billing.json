@@ -1,0 +1,6 @@
+{
+  "currencies": ["EUR", "GBP", "USD"],
+  "fallbackCurrency": "EUR",
+  "sendAt": "15:00",
+  "timeZone": "Europe/Berlin"
+}

@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "name": "Kyoto hotel",
+      "unit": "night",
+      "prices": { "EUR": "74.00", "JPY": "12000" }
+    },
+    {
+      "name": "Lisbon hotel",
+      "unit": "night",
+      "prices": { "EUR": "95.00" }
+    },
+    {
+      "name": "London hotel",
+      "unit": "night",
+      "prices": { "GBP": "140.00" }
+    },
+    {
+      "name": "New York hotel",
+      "unit": "night",
+      "prices": { "USD": "210.00" }
+    },
+    {
+      "name": "Kyoto station transfer",
+      "unit": "trip",
+      "prices": { "EUR": "22.00", "JPY": "3500" }
+    },
+    {
+      "name": "Lisbon airport transfer",
+      "unit": "trip",
+      "prices": { "EUR": "18.50" }
+    }
+  ]
+}

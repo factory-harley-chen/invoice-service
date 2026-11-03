@@ -1,0 +1,25 @@
+# Slack app manifest for the "Invoice monitor" app in the factory-gtm workspace.
+# Create it at https://api.slack.com/apps > Create New App > From a manifest.
+display_information:
+  name: Invoice monitor
+  description: Posts invoice alerts from the staging monitor of the invoice service.
+  background_color: "#2c2d30"
+features:
+  bot_user:
+    display_name: invoice-monitor
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      # post FIRING and RESOLVED
+      - chat:write
+      # see public channels, and read their messages (thread replies)
+      - channels:read
+      - channels:history
+      # the demo channels are private: needed to see them and read their threads
+      - groups:read
+      - groups:history
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
