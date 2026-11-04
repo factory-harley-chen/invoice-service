@@ -69,11 +69,11 @@ Who: Droid creates the file; the person pastes the token.
 
 1. `cp values.example.env demo/.env` (skip if `demo/.env` exists; then add any
    keys it lacks from `values.example.env`).
-2. Fill in the channel ids (P2 says where to find them) and leave
-   `RUN_IDENTITY` empty until P5 is decided.
+2. Fill in the channel ids (P2 says where to find them). Keep
+   `RUN_IDENTITY=factory-demos` from the template: that is the P5 decision.
 3. The person pastes `SLACK_BOT_TOKEN` into `demo/.env` in an editor.
 
-Check: `./demo.sh doctor --phase P1` (it fails on an empty `RUN_IDENTITY` until P5).
+Check: `./demo.sh doctor --phase P1`
 
 ## P2 Slack in factory-gtm
 
@@ -89,13 +89,13 @@ confirms it.
    `groups:read`, `groups:history`. The last two are needed because the
    channels are private. After adding a scope: Reinstall to Workspace, then
    paste the new Bot User OAuth Token into `demo/.env`.
-3. In each channel: channel details, Integrations, Add an app: Invoice monitor
-   and Factory.
+3. In each channel: channel details, Integrations, Add an app. Add Invoice
+   monitor, then Factory's app (search for "Factory").
 
 Check: `./demo.sh doctor --phase P2`. It calls `auth.test` and
-`conversations.info` (read only). `missing_scope` means `groups:read` is
-missing. `channel_not_found` on a private channel means the app is not in it
-yet.
+`conversations.info` (read only). `missing_scope` means one of the five scopes
+is missing, most often `groups:read`. `channel_not_found` on a private channel
+means the app is not in it yet.
 
 ## P3 GitHub
 
@@ -112,7 +112,10 @@ GitHub write to a public repo: confirm with the person first.
    git branch -M main
    gh repo create factory-harley-chen/invoice-service --public --source . --remote origin --push
    ```
-3. Tag the baseline that every reset returns to, once CI on that commit is green:
+3. Tag the baseline that every reset returns to, once CI on that commit is
+   green (every run listed by
+   `gh run list -R factory-harley-chen/invoice-service --commit "$(git rev-parse main)"`
+   shows success):
    ```sh
    git tag demo-baseline main
    git push origin demo-baseline
@@ -160,7 +163,8 @@ Changing the baseline later (new tooling, a better skill): a pull request does
 not work for your own change, because GitHub does not let the author approve
 his own pull request and the code owner is the only approver. Commit on `main`,
 run `npm run check`, push with the reset deploy key (the ruleset's one bypass
-actor), and move the tag once CI on the new commit is green:
+actor), and move the tag once CI on the new commit is green (the `gh run list`
+command in step 3):
 ```sh
 GIT_SSH_COMMAND='ssh -F /dev/null -o IdentityAgent=none -o IdentitiesOnly=yes -i ~/.ssh/invoice-service-reset' \
   git push git@github.com:factory-harley-chen/invoice-service.git main
@@ -180,15 +184,19 @@ Who: the person (Factory web pages).
 2. Connect GitHub so runs can reach `factory-harley-chen/invoice-service`
    (Settings, Integrations, GitHub; install the app on the
    `factory-harley-chen` account, this repo only).
-3. Confirm the Slack integration is the factory-gtm workspace.
-4. Create an API key for Factory Demos, then save it as the repo secret the
-   review workflow uses. The person pastes it at the hidden prompt:
+3. Confirm the Slack integration is the factory-gtm workspace: Settings,
+   Delegations, Slack, Configure (needs the Manager or Owner role).
+4. Create an API key while Factory Demos is the selected organization
+   (Settings, API Keys: https://app.factory.ai/settings/api-keys), then save it
+   as the repo secret the review workflow uses. The person pastes it at the
+   hidden prompt:
    ```sh
    gh secret set FACTORY_API_KEY -R factory-harley-chen/invoice-service
    ```
 
 Check: `./demo.sh doctor --phase P4` (the secret is checked; the GitHub
-connection is MANUAL).
+connection is MANUAL; doctor can't see the Slack workspace, so step 3 is
+confirmed by eye).
 
 ## P5 run identity and Environment
 
@@ -197,20 +205,27 @@ Who: the person (Factory web pages).
 1. Run identity: the Factory Demos default service account, `factory-demos`.
    Slack automations run as a service account, and the pull request author
    must not be the code owner, who can't approve their own pull request.
-   Write the name as the automation form shows it into `demo/.env`, for
-   example `RUN_IDENTITY=factory-demos`; the loop screen's record card shows
-   it.
+   `demo/.env` must hold the name exactly as the "Run as service account"
+   list in P6 shows it. The template already has `RUN_IDENTITY=factory-demos`;
+   change it only if that list shows another name. The loop screen's record
+   card shows it.
 2. An Environment for `factory-harley-chen/invoice-service`:
-   - Create it for the organization (Settings, Environments), so the list
-     shows it as "Organization". A personal Environment is hidden from a
-     service account.
-   - Put `node --version && npm ci` in the repository's own setup script, not
-     the environment-wide one. The environment-wide script runs in the home
-     folder (`/home/factory-user`), which has no lockfile, so `npm ci` fails
-     there. The repository is cloned to
+   - Create it for the organization (Settings, Environments, New
+     environment), so the list shows it as "Organization". A personal
+     Environment is hidden from a service account.
+   - Clone repositories: Add repository, pick
+     `factory-harley-chen/invoice-service`, Done.
+   - Put `node --version && npm ci` in the repository's own setup script
+     (under Repository setup scripts, expand the repository's row), not in the
+     Setup script box, which is environment-wide. The environment-wide script
+     runs in the home folder (`/home/factory-user`), which has no lockfile, so
+     `npm ci` fails there. The repository is cloned to
      `/home/factory-user/repos/invoice-service`.
    - Wait until it is Ready. It clones `main` when it builds, so rebuild it
-     after every move of `demo-baseline`.
+     (open the Environment, Rebuild) after every move of `demo-baseline`.
+     To confirm a build has the baseline, open the Environment: the
+     repository details show the commit the build used, which must match
+     `git rev-parse --short demo-baseline`.
 
 Check: `./demo.sh doctor --phase P5` (the Environment is MANUAL).
 
@@ -218,7 +233,9 @@ Check: `./demo.sh doctor --phase P5` (the Environment is MANUAL).
 
 Who: the person (Factory web pages).
 
-Create a Slack automation named "Invoice Alerts":
+Create a Slack automation named "Invoice Alerts": open Automations in the
+Factory app sidebar (https://app.factory.ai/automations), with Factory Demos
+selected, then New automation.
 
 - Template: none needed. If you start from Incident Response, replace its
   prompt with the one below.
@@ -254,34 +271,64 @@ Who: Droid.
 1. `./demo.sh up --mode rehearsal`. It starts staging on `STAGING_PORT`
    (BILLING_CURRENCIES=EUR,GBP,USD, at `demo-baseline`), the monitor, the
    deploy watcher and the loop server, and prints the URLs.
-2. Open the loop screen at http://localhost:4200.
-3. To try the local loop before Slack is ready: `./demo.sh up --no-post` (the
-   monitor prints its alerts in `demo/state/logs/monitor.log` instead of
-   posting).
+2. Open the loop screen at http://localhost:4200 (the port is `LOOP_PORT`).
+3. To try the local loop before Slack is ready: `./demo.sh up --no-post` (run
+   `./demo.sh down` first if the loop is already up; the monitor then prints
+   its alerts in `demo/state/logs/monitor.log` instead of posting).
 
 Check: `./demo.sh doctor --phase P7`
 
 ## P8 first rehearsal
 
-Who: the person approves on GitHub; Droid runs the rest.
+Who: the person approves and merges on GitHub, signed in as the code owner
+(`OWNER_LOGIN`); Droid runs the rest.
 
-1. `./demo.sh doctor` passes (everything except MANUAL lines).
-2. `./demo.sh break` and start a timer. The monitor posts FIRING in the
-   rehearsal channel within 2 s.
+Before step 2, the person has the rehearsal channel open in Slack and the loop
+screen open.
+
+1. `./demo.sh doctor` shows no FAIL, and the person has confirmed each MANUAL
+   line (P2, P4, P5 and P6).
+2. `./demo.sh break`. The monitor posts FIRING in the rehearsal channel within
+   2 s. No stopwatch is needed: step 7 reads the times from the event log and
+   GitHub.
 3. Watch the loop screen and the thread. Do not touch anything until
-   "Approval needed" arrives.
-4. On GitHub, open the fix pull request, check the three evidence lines, and
-   approve and merge it (the person).
-5. Watch the deploy: the watcher waits for CI on `main`, then restarts staging;
-   RESOLVED appears in the thread.
-6. Approve and merge the second pull request (the person).
+   "Approval needed" arrives (1:43 after the break in rehearsal 2; the skill
+   allows 9 minutes).
+4. The fix pull request (the person, on GitHub):
+   - Open the link on the "Approval needed" line. The pull request comes from
+     a `fix/...` branch, by `BOT_LOGIN` (`factory-droid[bot]`).
+   - Its description starts with three evidence lines: `Test: ...` (a test
+     that fails before the change and passes after), `Invoice ...` (the amount
+     before and after, and the expected one) and `Cause: ...`.
+   - Check S6 before approving: the merge box says a review is required, and
+     there is no box to bypass the rules.
+   - Wait until the check "Lint, typecheck and test" is green. The Droid
+     review comment follows a few minutes later (3:45 after the break in
+     rehearsal 2); it is not required to merge, but the demo shows it.
+   - Approve: Files changed, Review changes, Approve, Submit review.
+   - Merge: Merge pull request, then Confirm merge. The repo allows merge
+     commits only.
+5. Watch the deploy: once CI on `main` passes, the watcher restarts staging
+   with the merged code, and the monitor posts RESOLVED in the thread (about
+   30 s after the merge in rehearsal 2). If nothing has happened 3 minutes
+   after the merge, read `demo/state/logs/deploy.log`.
+6. The second pull request (the person, on GitHub): the "Left behind" link in
+   the thread, from a `check/...` branch. When the fix merged, GitHub deleted
+   the fix branch and moved this pull request onto `main`, so its base now
+   shows `main`. Wait until its checks are green, then approve and merge it as
+   in step 4. Staging deploys once more (about 30 s after the merge in
+   rehearsal 2); the alert stays resolved and the monitor posts nothing more.
 7. `./demo.sh times` and record the timings.
 8. `./demo.sh reset --yes`. It ends with a doctor run that must pass.
 
-Check: `./demo.sh doctor --phase P8` (no open demo pull requests, `main` at
-`demo-baseline`, no open alert).
+Check (after step 8): `./demo.sh doctor --phase P8` (no open demo pull
+requests, `main` at `demo-baseline`, no open alert). It also passes before the
+first rehearsal, because it checks the state a reset leaves.
 
-Pass list for the first rehearsal (from the plan's smoke tests):
+Pass list for the first rehearsal: the presenter's smoke tests that one
+rehearsal can show. The plan they come from is kept outside this repo. The
+missing numbers are deliberate: those tests need several rehearsals, another
+person or the room.
 
 | # | Test | Pass |
 | --- | --- | --- |
@@ -292,7 +339,7 @@ Pass list for the first rehearsal (from the plan's smoke tests):
 | S5 | Checks | CI and both reviews run on the bot's PR. Note who signs the review |
 | S6 | Approval policy | Merging is blocked without your approval, and no bypass box shows |
 | S7 | Deploy and alert clearing | It deploys only after CI passes on main. RESOLVED arrives within 30 s, with no second run |
-| S8 | Cost | Find the product screen with credits including retries, or drop the line |
+| S8 | Cost (optional) | Find the product screen with credits including retries, or drop the line |
 | S9 | Reset | Back to baseline in under 60 s, and `doctor` passes |
 | S13 | Loop screen accuracy | Each lit station matches its real event within 5 s |
 
