@@ -49,6 +49,15 @@ describe('buildInvoice', () => {
     expect(invoice.total).toEqual({ minor: 7400, formatted: '€74.00' });
   });
 
+  it('bills a JPY booking at the rate card price when JPY is enabled', () => {
+    const booking = findBooking('B-1042');
+    if (!booking) throw new Error('missing seed booking B-1042');
+    const invoice = buildInvoice(booking, rates, loadBilling({ BILLING_CURRENCIES: 'EUR,GBP,USD,JPY' }));
+    expect(invoice.currency).toBe('JPY');
+    expect(invoice.lines[0]?.unitPrice).toEqual({ minor: 12000, formatted: '¥12,000' });
+    expect(invoice.total).toEqual({ minor: 12000, formatted: '¥12,000' });
+  });
+
   it('carries the send time from billing config', () => {
     const invoice = invoiceFor('B-1046');
     expect(invoice.sendAt).toBe('15:00');
