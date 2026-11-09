@@ -1,0 +1,53 @@
+name: Evidence pictures
+
+"on":
+  pull_request:
+    branches: [main, "fix/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pictures:
+    name: Evidence pictures
+    # Fix pull requests get pictures here only when the run left none; check
+    # pull requests always get their new check before and after the fix. Not
+    # a required check, and it never fails: a problem leaves the body as it is
+    # and shows in the job summary.
+    if: startsWith(github.head_ref, 'fix/') || startsWith(github.head_ref, 'check/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_REF: ${{ github.head_ref }}
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - name: Does this pull request need pictures?
+        id: need
+        continue-on-error: true
+        run: node scripts/ci-pictures.ts need
+      - name: Install dependencies
+        if: steps.need.outputs.needed == 'true'
+        continue-on-error: true
+        run: npm ci
+      - name: Make the pictures and add them to the pull request
+        if: steps.need.outputs.needed == 'true'
+        continue-on-error: true
+        # The commit that holds the pictures needs an author; GitHub's own bot.
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: node scripts/ci-pictures.ts make

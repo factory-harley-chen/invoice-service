@@ -309,8 +309,10 @@ screen open.
    - Its description starts with three evidence lines: `Test: ...` (a test
      that fails before the change and passes after), `Invoice ...` (the amount
      before and after, and the expected one) and `Cause: ...`. Below them, a
-     table of pictures: the test and the invoice, before and after the fix
-     (or "Screenshots: not taken" if the run couldn't take them).
+     table of pictures: the test and the invoice, before and after the fix.
+     If the run couldn't take them, the "Evidence pictures" job makes them
+     from git a minute or two after the pull request opens, with a line
+     saying CI made them.
    - Check S6 before approving: the merge box says a review is required, and
      there is no box to bypass the rules.
    - Wait until the check "Lint, typecheck and test" is green. The Droid
@@ -329,7 +331,9 @@ screen open.
 6. The second pull request (the person, on GitHub): the "Left behind" link in
    the thread, from a `check/...` branch. When the fix merged, GitHub deleted
    the fix branch and moved this pull request onto `main`, so its base now
-   shows `main`. Wait for RESOLVED and for its checks to be green, then
+   shows `main`. Its description gains a picture of the new check on main's
+   code (red) and on its own code (green), added by the "Evidence pictures"
+   job. Wait for RESOLVED and for its checks to be green, then
    approve and merge it as in step 4. Merged earlier, it cancels CI on the
    fix's merge commit, and RESOLVED waits for this one's CI as well
    (rehearsal 3). Staging deploys once more (about 30 s after the merge in

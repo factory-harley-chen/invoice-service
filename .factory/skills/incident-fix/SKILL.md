@@ -87,12 +87,13 @@ going on.
   - `Invoice <booking id>: <amount before> before, <amount after> after (expected <expected>).`
   - `Cause: <one line>.`
   Then the printed table, as it is. Then one line naming the alert
-  (`invoice-total-mismatch`, booking id) and any related issue
-  (`Related: #<n>`), and nothing else.
+  (`invoice-total-mismatch`, booking id, `BILLING_CURRENCIES=<from the alert>`)
+  and any related issue (`Related: #<n>`), and nothing else.
 - Pictures never hold up the fix. If a picture or `scripts/evidence.ts`
   fails twice, put `Screenshots: not taken (<reason in a few words>).` in
-  place of the table and go on. The pictures stay in `/tmp/evidence/`; never
-  commit them to the fix branch.
+  place of the table and go on. The "Evidence pictures" job in CI then makes
+  them from git and adds them to the body; do not wait for it. The pictures
+  stay in `/tmp/evidence/`; never commit them to the fix branch.
 - The code owners file asks the owner for review. If no review is requested,
   request one from the owner in `.github/CODEOWNERS`
   (for example `gh pr edit <n> --add-reviewer <owner>`).
@@ -108,10 +109,16 @@ currency.
   enabled and checks the line comes out at exactly the rate card's price (the
   amount in minor units and the displayed amount). It must cover every
   currency in the rate card, not only the one in the alert.
+- Write each currency's decimal places into the test as ISO 4217 gives them
+  (EUR, GBP and USD 2, JPY 0), and work out the expected amounts from that
+  table, not from the code under test or `Intl`'s defaults. A rate card
+  currency missing from the table fails the test.
 - `npm run check`, commit (`test: ...`), push, and open the pull request with
   base `fix/<slug>`. Title in plain words (for example "Check every rate card
   currency is invoiced at its price"). Body: one line saying what it checks and
-  that it is stacked on the fix pull request (`Stacked on #<n>`).
+  that it is stacked on the fix pull request (`Stacked on #<n>`). No pictures:
+  the "Evidence pictures" job adds the new check on main's code and on this
+  branch.
 
 ## 7. Final reply in the alert's thread
 

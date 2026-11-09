@@ -8,9 +8,10 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { evidenceTable, pictureNames, repoFromRemote, validSlug } from './lib/evidence.ts';
+import { publishPictures } from './lib/publish.ts';
 
-function git(args: string[], input?: string): string {
-  return execFileSync('git', args, { input, encoding: 'utf8' }).trim();
+function git(args: string[]): string {
+  return execFileSync('git', args, { encoding: 'utf8' }).trim();
 }
 
 const [slug = '', folder = '/tmp/evidence'] = process.argv.slice(2);
@@ -29,10 +30,5 @@ if (present.length === 0) {
   process.exit(1);
 }
 
-const tree = git(
-  ['mktree'],
-  present.map((name) => `100644 blob ${git(['hash-object', '-w', join(folder, name)])}\t${name}\n`).join(''),
-);
-const commit = git(['commit-tree', tree, '-m', `Pictures for ${slug}`]);
-git(['push', '--force', 'origin', `${commit}:refs/heads/evidence/${slug}`]);
+const commit = publishPictures(folder, present, `evidence/${slug}`, `Pictures for ${slug}`);
 console.log(evidenceTable(repo, commit, new Set(present)));
