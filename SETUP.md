@@ -215,11 +215,20 @@ Who: the person (Factory web pages).
      Environment is hidden from a service account.
    - Clone repositories: Add repository, pick
      `factory-harley-chen/invoice-service`, Done.
-   - Put `node --version && npm ci` in the repository's own setup script
-     (under Repository setup scripts, expand the repository's row), not in the
-     Setup script box, which is environment-wide. The environment-wide script
-     runs in the home folder (`/home/factory-user`), which has no lockfile, so
-     `npm ci` fails there. The repository is cloned to
+   - Put this in the repository's own setup script (under Repository setup
+     scripts, expand the repository's row):
+
+     ```sh
+     node --version && npm ci && { npx playwright-core install chromium && sudo env "PATH=$PATH" npx playwright-core install-deps chromium || echo "Chromium install failed: runs will skip the screenshots"; }
+     ```
+
+     The part in braces installs the browser the run uses for the invoice
+     screenshots, then its system libraries (October's commands). If it
+     fails, the build still finishes and the run writes "Screenshots: not
+     taken" in the pull request. Don't put any of it in the Setup script
+     box, which is environment-wide. The environment-wide script runs in the
+     home folder (`/home/factory-user`), which has no lockfile, so `npm ci`
+     fails there. The repository is cloned to
      `/home/factory-user/repos/invoice-service`.
    - Wait until it is Ready. It clones `main` when it builds, so rebuild it
      (open the Environment, Rebuild) after every move of `demo-baseline`.

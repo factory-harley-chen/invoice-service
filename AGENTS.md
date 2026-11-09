@@ -24,6 +24,7 @@ relative imports.
 
 - `src/server.ts`: starts the HTTP server.
 - `src/app.ts`: request handler and routes.
+- `src/page.ts`: the invoice as an HTML page (`/invoices/:bookingId/page`).
 - `src/invoice.ts`: builds an invoice from a booking.
 - `src/money.ts`: parses rate-card prices.
 - `src/format.ts`: formats amounts for display.
@@ -35,10 +36,13 @@ relative imports.
   with `src/`.
 - `demo/`: demo tooling (`./demo.sh`, the deploy watcher, the loop screen).
   `demo/.env` and `demo/state/` are git-ignored. See `SETUP.md`.
+- `scripts/`: `screenshot.ts` serves this checkout and saves a picture of an
+  invoice page; `evidence.ts` publishes before and after pictures for a pull
+  request body.
 - `.factory/skills/incident-fix/SKILL.md`: the process to follow when an
   invoice alert starts a run.
 - Tests sit next to the code as `*.test.ts`. `npm run check` covers `src/`,
-  `monitor/` and `demo/`.
+  `monitor/`, `demo/` and `scripts/`.
 
 ## Rules
 

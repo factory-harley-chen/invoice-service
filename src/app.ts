@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { BillingConfig, RateCard } from './config.ts';
 import type { Booking } from './data/bookings.ts';
 import { buildInvoice } from './invoice.ts';
+import { renderInvoicePage } from './page.ts';
 
 export type AppOptions = {
   bookings: Booking[];
@@ -15,6 +16,11 @@ type Handler = (req: IncomingMessage, res: ServerResponse) => void;
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body));
+}
+
+function sendHtml(res: ServerResponse, html: string): void {
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  res.end(html);
 }
 
 export function createApp(options: AppOptions): Handler {
@@ -49,6 +55,17 @@ export function createApp(options: AppOptions): Handler {
           return;
         }
         sendJson(res, 200, buildInvoice(booking, rates, billing));
+      },
+    },
+    {
+      pattern: /^\/invoices\/([^/]+)\/page$/,
+      handle: (res, [bookingId = '']) => {
+        const booking = bookings.find((entry) => entry.id === bookingId);
+        if (!booking) {
+          sendJson(res, 404, { error: 'not_found', message: `No booking ${bookingId}` });
+          return;
+        }
+        sendHtml(res, renderInvoicePage(buildInvoice(booking, rates, billing)));
       },
     },
   ];

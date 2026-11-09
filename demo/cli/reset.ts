@@ -62,7 +62,7 @@ async function githubSteps(v: Values, options: ResetOptions, say: (line: string)
     }
   }
   const refs: string[] = [];
-  for (const prefix of ['fix/', 'check/']) {
+  for (const prefix of ['fix/', 'check/', 'evidence/']) {
     const matching = await ghJson<Array<{ ref: string }>>(['api', `repos/${R}/git/matching-refs/heads/${prefix}`]);
     if (matching.ok) refs.push(...matching.value.map((r) => r.ref.replace(/^refs\/heads\//, '')));
   }

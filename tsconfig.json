@@ -13,6 +13,6 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true
   },
-  "include": ["src", "monitor", "demo", "vitest.config.ts", "eslint.config.js"],
+  "include": ["src", "monitor", "demo", "scripts", "vitest.config.ts", "eslint.config.js"],
   "exclude": ["node_modules", "demo/state"]
 }

@@ -12,6 +12,7 @@ and returns it as JSON, with each amount as an integer and as a display string.
 | GET | `/health` | `{"status": "ok"}` |
 | GET | `/invoices` | One summary per booking: booking id, customer, currency and total. |
 | GET | `/invoices/:bookingId` | The full invoice: booking id, customer, currency, lines (item, unit, quantity, unit price and line total), the total, `sendAt` and `timeZone`. |
+| GET | `/invoices/:bookingId/page` | The same invoice as an HTML page, as the customer sees it. |
 
 An unknown booking id or path returns `404` with a JSON body such as
 `{"error": "not_found", "message": "No booking B-9999"}`. Each request writes

@@ -51,6 +51,21 @@ describe('server', () => {
     });
   });
 
+  it('GET /invoices/:bookingId/page returns the invoice page', async () => {
+    const res = await fetch(`${baseUrl}/invoices/B-1043/page`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const html = await res.text();
+    expect(html).toContain('<h1>Invoice B-1043</h1>');
+    expect(html).toContain('<strong>£280.00</strong>');
+  });
+
+  it('returns 404 JSON for the page of an unknown booking', async () => {
+    const res = await fetch(`${baseUrl}/invoices/B-9999/page`);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ error: 'not_found' });
+  });
+
   it('returns 404 JSON for an unknown booking', async () => {
     const res = await fetch(`${baseUrl}/invoices/B-9999`);
     expect(res.status).toBe(404);

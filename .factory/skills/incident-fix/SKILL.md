@@ -38,10 +38,13 @@ examples; use whatever tools you have.
 ## 2. Reproduce (1 to 2 minutes)
 
 - `npm ci` if `node_modules` is missing.
-- Start the service with the alert's environment on a free port, for example
-  `BILLING_CURRENCIES=<from the alert> PORT=4300 node src/server.ts`, fetch the
-  invoice for the booking in the alert (`/invoices/<booking id>`), note the
-  invoiced amount, then stop the server.
+- Reproduce with the alert's environment:
+  `BILLING_CURRENCIES=<from the alert> node scripts/screenshot.ts <booking id> /tmp/evidence/before.png`.
+  It serves this checkout on a free port, prints the invoice's currency and
+  total, and saves a picture of the invoice page. Note the invoiced amount. If
+  it fails, start the service yourself
+  (`BILLING_CURRENCIES=<from the alert> PORT=4300 node src/server.ts`), fetch
+  `/invoices/<booking id>`, note the amount and stop the server.
 - Confirm expected versus actual from the rate card in `config/rates.json`.
   If you cannot reproduce it, say so in the thread and stop.
 
@@ -60,8 +63,8 @@ examples; use whatever tools you have.
 
 - Change as little as possible in `src/` so the test passes.
 - Run `npm run check` (lint, typecheck, tests). Everything must pass.
-- Fetch the same invoice again with the alert's `BILLING_CURRENCIES` and note
-  the amount after the fix.
+- Run the same `scripts/screenshot.ts` command with `/tmp/evidence/after.png`
+  and note the amount after the fix.
 - Commit (`fix: ...`) and push.
 
 ## 5. Fix pull request
@@ -69,14 +72,21 @@ examples; use whatever tools you have.
 Open it from `fix/<slug>` to `main`. Do not wait for CI or reviews before
 going on.
 
+- Publish the two pictures: `node scripts/evidence.ts <slug> /tmp/evidence/before.png /tmp/evidence/after.png`
+  pushes them to the branch `evidence/<slug>` and prints a Markdown table.
 - Title: plain words, what is now right (for example "Bill <currency> invoices at
   the right amount").
 - Body, starting with exactly these three evidence lines:
   - `Test: <test name> fails before this change and passes after.`
   - `Invoice <booking id>: <amount before> before, <amount after> after (expected <expected>).`
   - `Cause: <one line>.`
-  Then one line naming the alert (`invoice-total-mismatch`, booking id) and any
+  Then the line `Invoice page before and after:` and the printed table. Then
+  one line naming the alert (`invoice-total-mismatch`, booking id) and any
   related issue (`Related: #<n>`), and nothing else.
+- Pictures never hold up the fix. If a screenshot or `scripts/evidence.ts`
+  fails twice, put `Screenshots: not taken (<reason in a few words>).` in
+  place of the table and go on. The pictures stay in `/tmp/evidence/`; never
+  commit them to the fix branch.
 - The code owners file asks the owner for review. If no review is requested,
   request one from the owner in `.github/CODEOWNERS`
   (for example `gh pr edit <n> --add-reviewer <owner>`).

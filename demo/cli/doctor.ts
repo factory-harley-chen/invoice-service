@@ -405,7 +405,7 @@ function buildChecks(loaded: LoadedValues): Check[] {
           ? pass(`RUN_IDENTITY=${v.RUN_IDENTITY}`)
           : fail('RUN_IDENTITY is empty', 'write the service account name into demo/.env, for example RUN_IDENTITY=factory-demos (SETUP.md P5)'),
     },
-    { phase: 'P5', name: 'Environment for the repo', run: async () => manual('confirm in Factory Demos: an Organization Environment for ' + R + ', Ready, with node --version && npm ci in the repository setup script, rebuilt after the last demo-baseline move') },
+    { phase: 'P5', name: 'Environment for the repo', run: async () => manual('confirm in Factory Demos: an Organization Environment for ' + R + ', Ready, with node --version && npm ci and the Chromium install (SETUP.md P5) in the repository setup script, rebuilt after the last demo-baseline move') },
     // P6 automation
     {
       phase: 'P6',
