@@ -34,7 +34,8 @@ relative imports.
 - `config/`: rate card and billing settings.
 - `monitor/`: the staging monitor that posts invoice alerts. It shares no code
   with `src/`.
-- `demo/`: demo tooling (`./demo.sh`, the deploy watcher, the loop screen).
+- `demo/`: demo tooling (`./demo.sh`, the deploy watcher, the loop screen and
+  the release screen).
   `demo/.env` and `demo/state/` are git-ignored. See `SETUP.md`.
 - `scripts/`: `screenshot.ts` serves this checkout and saves a picture of an
   invoice page; `test-picture.ts` runs a test file and saves a picture of its

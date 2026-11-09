@@ -240,6 +240,7 @@ async function up(v: Values, mode: Mode, noPost: boolean, dryRun: boolean): Prom
   console.log('');
   console.log(`staging      ${stagingUrl(v)}/invoices/B-1042`);
   console.log(`loop screen  ${existsSync(scripts.loop) ? loopUrl(v) : '(not built yet)'}`);
+  if (existsSync(scripts.loop)) console.log(`release      ${loopUrl(v)}/release`);
   console.log(`slack        ${channel ? `${v.SLACK_WORKSPACE_URL.replace(/\/$/, '')}/archives/${channel}` : '(channel id not set)'}`);
   console.log(`github       https://github.com/${v.GITHUB_REPO}/pulls`);
   console.log(`logs         ${files.logs()}`);

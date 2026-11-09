@@ -281,6 +281,14 @@ Who: Droid.
    (BILLING_CURRENCIES=EUR,GBP,USD, at `demo-baseline`), the monitor, the
    deploy watcher and the loop server, and prints the URLs.
 2. Open the loop screen at http://localhost:4200 (the port is `LOOP_PORT`).
+   The release screen, the invented billing page the talk starts from, is at
+   http://localhost:4200/release. Its "Turn on yen billing" button, then
+   "Roll out", runs `./demo.sh break` and nothing else. It is greyed out,
+   with the reason in the yen row, unless staging is up with yen off and the
+   loop server is reading live events (not `./demo.sh replay`). It then
+   follows the run: the invoice turns red while the alert is open, "Today"
+   lists each step once the loop records it, and the invoice turns green
+   ("Matches the rate card") when the alert clears.
 3. To try the local loop before Slack is ready: `./demo.sh up --no-post` (run
    `./demo.sh down` first if the loop is already up; the monitor then prints
    its alerts in `demo/state/logs/monitor.log` instead of posting).
@@ -297,9 +305,11 @@ screen open.
 
 1. `./demo.sh doctor` shows no FAIL, and the person has confirmed each MANUAL
    line (P2, P4, P5 and P6).
-2. `./demo.sh break`. The monitor posts FIRING in the rehearsal channel within
-   2 s. No stopwatch is needed: step 7 reads the times from the event log and
-   GitHub.
+2. On the release screen, "Turn on yen billing", then "Roll out" (or
+   `./demo.sh break` in a terminal; they do the same). The monitor posts FIRING
+   in the rehearsal channel within 2 s, and the release screen shows the
+   billing alert. No stopwatch is needed: step 7 reads the times from the
+   event log and GitHub.
 3. Watch the loop screen and the thread. Do not touch anything until
    "Approval needed" arrives (1:43 after the break in rehearsal 2; the skill
    allows 9 minutes).
@@ -338,6 +348,8 @@ screen open.
    fix's merge commit, and RESOLVED waits for this one's CI as well
    (rehearsal 3). Staging deploys once more (about 30 s after the merge in
    rehearsal 2); the alert stays resolved and the monitor posts nothing more.
+   The release screen now shows ¥12,000 in green, a green "Resolved" banner
+   and "Today" ending in "Check added"; the talk's demo ends on it.
 7. `./demo.sh times` and record the timings.
 8. `./demo.sh reset --yes`. It ends with a doctor run that must pass.
 
@@ -371,7 +383,7 @@ person or the room.
 | `./demo.sh doctor [--phase Pn]` | The checks above. Read only. |
 | `./demo.sh up [--mode live\|rehearsal] [--no-post]` | Starts staging, monitor, deploy watcher and loop server. |
 | `./demo.sh down` | Stops them. |
-| `./demo.sh break` | Turns JPY billing on in staging. |
+| `./demo.sh break` | Turns JPY billing on in staging. The release screen's "Roll out" runs it. |
 | `./demo.sh reset [--yes]` | Back to baseline; GitHub only with `--yes`. |
 | `./demo.sh replay [file]` | Plays a recorded timeline on the loop screen (works offline). |
 | `./demo.sh times [file]` | Prints a timeline's beat times. |

@@ -5,11 +5,13 @@
 
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import type { ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve, sep } from 'node:path';
 import { USAGE, describe, loadConfig, parseArgs } from './config.ts';
 import type { Args, Config } from './config.ts';
 import { currentAlert, derive, runActive } from './rules.ts';
+import { holdRead, readStaging, releaseView, rollOut, rollOutRequestError } from './release.ts';
+import type { HeldRead, ReleaseView } from './release.ts';
 import type { RuleConfig } from './rules.ts';
 import { initialInputs, script, SIMULATION_LENGTH_S } from './simulate.ts';
 import { createTimelineWriter, pickRun, readTimeline } from './timeline.ts';
@@ -71,7 +73,45 @@ const STATIC: Record<string, { file: string; type: string }> = {
   '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/loop.css': { file: 'loop.css', type: 'text/css; charset=utf-8' },
   '/loop.js': { file: 'loop.js', type: 'text/javascript; charset=utf-8' },
+  '/release': { file: 'release.html', type: 'text/html; charset=utf-8' },
+  '/release/': { file: 'release.html', type: 'text/html; charset=utf-8' },
+  '/release.css': { file: 'release.css', type: 'text/css; charset=utf-8' },
+  '/release.js': { file: 'release.js', type: 'text/javascript; charset=utf-8' },
 };
+
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
+
+// The release screen's button runs ./demo.sh break; one at a time, live mode only.
+let rolling = false;
+let lastStaging: HeldRead | null = null;
+
+async function releaseState(): Promise<ReleaseView> {
+  const held = holdRead(await readStaging(cfg.stagingUrl), lastStaging, Date.now());
+  lastStaging = held.last;
+  const { invoices, preview } = held.read;
+  return releaseView({ live: args.mode === 'live', invoices, preview, state: latest, rolling });
+}
+
+async function handleRollOut(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  req.resume();
+  const refused = rollOutRequestError(req.method, req.headers, cfg.port);
+  if (refused !== null) return sendJson(res, 403, { ok: false, message: refused });
+  if (rolling) return sendJson(res, 409, { ok: false, message: 'Rolling out' });
+  rolling = true;
+  try {
+    const { invoices, preview } = await readStaging(cfg.stagingUrl);
+    const view = releaseView({ live: args.mode === 'live', invoices, preview, state: latest, rolling: false });
+    if (!view.canRollOut) return sendJson(res, 409, { ok: false, message: view.reason });
+    const result = await rollOut(cfg.repoRoot);
+    process.stdout.write(`[${new Date().toLocaleTimeString('en-GB')}] release screen: ${result.message}\n`);
+    sendJson(res, result.ok ? 200 : 500, result);
+  } finally {
+    rolling = false;
+  }
+}
 
 const server = createServer((req, res) => {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
@@ -82,6 +122,17 @@ const server = createServer((req, res) => {
     if (msg !== '') res.write(msg);
     clients.add(res);
     req.on('close', () => clients.delete(res));
+    return;
+  }
+  if (path === '/release/state') {
+    void releaseState().then(
+      (view) => sendJson(res, 200, view),
+      (e: unknown) => sendJson(res, 500, { error: e instanceof Error ? e.message : String(e) }),
+    );
+    return;
+  }
+  if (path === '/release/roll-out') {
+    void handleRollOut(req, res).catch((e: unknown) => sendJson(res, 500, { ok: false, message: e instanceof Error ? e.message : String(e) }));
     return;
   }
   if (path === '/state') {

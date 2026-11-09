@@ -27,6 +27,7 @@ export type Config = {
   timelineFile: string;
   publicDir: string;
   port: number;
+  stagingUrl: string;
   args: Args;
   demoMode: string;
   slack: { token: string; workspaceUrl: string; channelLive: string; channelRehearsal: string; intervalMs: number };
@@ -149,6 +150,7 @@ export function loadConfig(args: Args, env: Record<string, string | undefined> =
     timelineFile: resolve(stateDir, 'timeline.jsonl'),
     publicDir: resolve(import.meta.dirname, 'public'),
     port: args.port ?? (Number.isFinite(portValue) && portValue > 0 ? portValue : 4200),
+    stagingUrl: `http://127.0.0.1:${get('STAGING_PORT', '4100')}`,
     args,
     demoMode: get('DEMO_MODE', 'rehearsal'),
     slack: {
