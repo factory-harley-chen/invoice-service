@@ -22,6 +22,12 @@ describe('terminalPage', () => {
     expect(html).toContain('<span class="prompt">$</span> npx vitest run src/a.test.ts\nline one\nline two</pre>');
   });
 
+  it('draws the separator lines with a character every monospace font has', () => {
+    const html = terminalPage('cmd', '⎯⎯⎯ Failed Tests 1 ⎯⎯⎯');
+    expect(html).toContain('─── Failed Tests 1 ───');
+    expect(html).not.toContain('⎯');
+  });
+
   it('says how many lines it left out', () => {
     const output = Array.from({ length: maxLines + 5 }, (_, i) => `line ${i}`).join('\n');
     const html = terminalPage('cmd', output);
