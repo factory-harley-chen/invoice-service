@@ -411,7 +411,7 @@ function buildChecks(loaded: LoadedValues): Check[] {
       phase: 'P6',
       name: 'Skill and workflows on main',
       run: async () => {
-        const paths = ['.factory/skills/incident-fix/SKILL.md', '.github/workflows/ci.yml', '.github/workflows/droid-review.yml', 'AGENTS.md'];
+        const paths = ['.factory/skills/incident-fix/SKILL.md', '.github/workflows/ci.yml', '.github/workflows/droid-review.yml', '.github/workflows/fails-before.yml', 'AGENTS.md'];
         const missingLocal = paths.filter((path) => !existsSync(join(repoRoot, path)));
         if (missingLocal.length) return fail(`missing here: ${missingLocal.join(', ')}`, 'restore them from git');
         const results = await Promise.all(paths.map((path) => gh(['api', `repos/${R}/contents/${path}?ref=main`, '--jq', '.path'], 15_000)));

@@ -37,9 +37,10 @@ examples; use whatever tools you have.
 
 ## 2. Reproduce (1 to 2 minutes)
 
-- `npm ci` if `node_modules` is missing.
+- `npm ci` if `node_modules` is missing. Start with an empty picture folder:
+  `rm -rf /tmp/evidence`.
 - Reproduce with the alert's environment:
-  `BILLING_CURRENCIES=<from the alert> node scripts/screenshot.ts <booking id> /tmp/evidence/before.png`.
+  `BILLING_CURRENCIES=<from the alert> node scripts/screenshot.ts <booking id> /tmp/evidence/invoice-before.png`.
   It serves this checkout on a free port, prints the invoice's currency and
   total, and saves a picture of the invoice page. Note the invoiced amount. If
   it fails, start the service yourself
@@ -55,7 +56,9 @@ examples; use whatever tools you have.
 - Create the branch `fix/<short-slug>` (for example `fix/<currency>-invoice-amounts`).
 - Write one focused test, next to the code as `*.test.ts`, that fails because
   of this fault. Give it a plain name that says what must be true.
-- Run it and see it fail for the right reason.
+- Run it and see it fail for the right reason:
+  `node scripts/test-picture.ts <test file> /tmp/evidence/test-before.png` runs
+  the test file, prints the output and saves a picture of it.
 - Commit the test alone, with a message starting `test:`, and push the branch
   straight away (`git push -u origin fix/<slug>`).
 
@@ -63,8 +66,10 @@ examples; use whatever tools you have.
 
 - Change as little as possible in `src/` so the test passes.
 - Run `npm run check` (lint, typecheck, tests). Everything must pass.
-- Run the same `scripts/screenshot.ts` command with `/tmp/evidence/after.png`
-  and note the amount after the fix.
+- Run the same two commands for the pictures after the fix:
+  `node scripts/test-picture.ts <test file> /tmp/evidence/test-after.png`, and
+  `scripts/screenshot.ts` with `/tmp/evidence/invoice-after.png`. Note the
+  amount after the fix.
 - Commit (`fix: ...`) and push.
 
 ## 5. Fix pull request
@@ -72,18 +77,19 @@ examples; use whatever tools you have.
 Open it from `fix/<slug>` to `main`. Do not wait for CI or reviews before
 going on.
 
-- Publish the two pictures: `node scripts/evidence.ts <slug> /tmp/evidence/before.png /tmp/evidence/after.png`
-  pushes them to the branch `evidence/<slug>` and prints a Markdown table.
+- Publish the pictures: `node scripts/evidence.ts <slug>` pushes the ones in
+  `/tmp/evidence/` to the branch `evidence/<slug>` and prints a Markdown table
+  (the test and the invoice, before and after the fix).
 - Title: plain words, what is now right (for example "Bill <currency> invoices at
   the right amount").
 - Body, starting with exactly these three evidence lines:
   - `Test: <test name> fails before this change and passes after.`
   - `Invoice <booking id>: <amount before> before, <amount after> after (expected <expected>).`
   - `Cause: <one line>.`
-  Then the line `Invoice page before and after:` and the printed table. Then
-  one line naming the alert (`invoice-total-mismatch`, booking id) and any
-  related issue (`Related: #<n>`), and nothing else.
-- Pictures never hold up the fix. If a screenshot or `scripts/evidence.ts`
+  Then the printed table, as it is. Then one line naming the alert
+  (`invoice-total-mismatch`, booking id) and any related issue
+  (`Related: #<n>`), and nothing else.
+- Pictures never hold up the fix. If a picture or `scripts/evidence.ts`
   fails twice, put `Screenshots: not taken (<reason in a few words>).` in
   place of the table and go on. The pictures stay in `/tmp/evidence/`; never
   commit them to the fix branch.

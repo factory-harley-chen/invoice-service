@@ -1,18 +1,21 @@
-// Publishes the before and after screenshots for a pull request body:
-//   node scripts/evidence.ts <slug> <before.png> <after.png>
-// Pushes the two pictures to the branch evidence/<slug> (a commit with only
-// those two files, so the fix branch's diff stays clean) and prints a Markdown
-// table to paste into the pull request body.
+// Publishes the before and after pictures for a pull request body:
+//   node scripts/evidence.ts <slug> [folder, default /tmp/evidence]
+// Pushes the pictures found in the folder (test-before.png, test-after.png,
+// invoice-before.png, invoice-after.png) to the branch evidence/<slug>, in a
+// commit with only those files so the fix branch's diff stays clean, and
+// prints a Markdown table to paste into the pull request body.
 import { execFileSync } from 'node:child_process';
-import { evidenceTable, repoFromRemote, validSlug } from './lib/evidence.ts';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { evidenceTable, pictureNames, repoFromRemote, validSlug } from './lib/evidence.ts';
 
 function git(args: string[], input?: string): string {
   return execFileSync('git', args, { input, encoding: 'utf8' }).trim();
 }
 
-const [slug = '', before = '', after = ''] = process.argv.slice(2);
-if (!validSlug(slug) || !before || !after) {
-  console.error('usage: node scripts/evidence.ts <slug> <before.png> <after.png>');
+const [slug = '', folder = '/tmp/evidence'] = process.argv.slice(2);
+if (!validSlug(slug)) {
+  console.error('usage: node scripts/evidence.ts <slug> [folder, default /tmp/evidence]');
   process.exit(2);
 }
 const repo = process.env.EVIDENCE_REPO ?? repoFromRemote(git(['remote', 'get-url', 'origin']));
@@ -20,11 +23,16 @@ if (!repo) {
   console.error('cannot tell the GitHub repo from origin; set EVIDENCE_REPO=owner/name');
   process.exit(2);
 }
+const present = pictureNames.filter((name) => existsSync(join(folder, name)));
+if (present.length === 0) {
+  console.error(`no pictures in ${folder} (looked for ${pictureNames.join(', ')})`);
+  process.exit(1);
+}
 
 const tree = git(
   ['mktree'],
-  `100644 blob ${git(['hash-object', '-w', before])}\tbefore.png\n100644 blob ${git(['hash-object', '-w', after])}\tafter.png\n`,
+  present.map((name) => `100644 blob ${git(['hash-object', '-w', join(folder, name)])}\t${name}\n`).join(''),
 );
-const commit = git(['commit-tree', tree, '-m', `Screenshots for ${slug}`]);
+const commit = git(['commit-tree', tree, '-m', `Pictures for ${slug}`]);
 git(['push', '--force', 'origin', `${commit}:refs/heads/evidence/${slug}`]);
-console.log(evidenceTable(repo, commit));
+console.log(evidenceTable(repo, commit, new Set(present)));

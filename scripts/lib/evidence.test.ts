@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evidenceTable, repoFromRemote, validSlug } from './evidence.ts';
+import { evidenceTable, pictureNames, repoFromRemote, validSlug } from './evidence.ts';
 
 describe('repoFromRemote', () => {
   it('reads https and ssh remotes', () => {
@@ -24,13 +24,26 @@ describe('validSlug', () => {
 });
 
 describe('evidenceTable', () => {
-  it('links both pictures at one commit', () => {
-    expect(evidenceTable('acme/invoice-service', 'abc123')).toBe(
+  const url = (name: string) => `https://raw.githubusercontent.com/acme/invoice-service/abc123/${name}`;
+
+  it('shows the test and the invoice, before and after, from one commit', () => {
+    expect(evidenceTable('acme/invoice-service', 'abc123', new Set(pictureNames))).toBe(
       [
-        '| Before | After |',
-        '| --- | --- |',
-        '| ![Invoice before the fix](https://raw.githubusercontent.com/acme/invoice-service/abc123/before.png) | ![Invoice after the fix](https://raw.githubusercontent.com/acme/invoice-service/abc123/after.png) |',
+        '| | Before the fix | After the fix |',
+        '| --- | --- | --- |',
+        `| The test | ![The test before the fix](${url('test-before.png')}) | ![The test after the fix](${url('test-after.png')}) |`,
+        `| The invoice | ![The invoice before the fix](${url('invoice-before.png')}) | ![The invoice after the fix](${url('invoice-after.png')}) |`,
       ].join('\n'),
     );
+  });
+
+  it('leaves out a pair with no pictures and marks a missing one', () => {
+    const table = evidenceTable('acme/invoice-service', 'abc123', new Set(['test-before.png', 'test-after.png', 'invoice-before.png']));
+    expect(table).toContain(`| The invoice | ![The invoice before the fix](${url('invoice-before.png')}) | Not taken |`);
+    expect(evidenceTable('acme/invoice-service', 'abc123', new Set(['test-after.png']))).not.toContain('The invoice');
+  });
+
+  it('is empty when there are no pictures', () => {
+    expect(evidenceTable('acme/invoice-service', 'abc123', new Set())).toBe('');
   });
 });

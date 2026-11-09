@@ -308,12 +308,17 @@ screen open.
      a `fix/...` branch, by `BOT_LOGIN` (`factory-droid[bot]`).
    - Its description starts with three evidence lines: `Test: ...` (a test
      that fails before the change and passes after), `Invoice ...` (the amount
-     before and after, and the expected one) and `Cause: ...`.
+     before and after, and the expected one) and `Cause: ...`. Below them, a
+     table of pictures: the test and the invoice, before and after the fix
+     (or "Screenshots: not taken" if the run couldn't take them).
    - Check S6 before approving: the merge box says a review is required, and
      there is no box to bypass the rules.
    - Wait until the check "Lint, typecheck and test" is green. The Droid
      review comment follows a few minutes later (3:45 after the break in
-     rehearsal 2); it is not required to merge, but the demo shows it.
+     rehearsal 2); it is not required to merge, but the demo shows it. A
+     third check, "New test fails without the fix", runs the pull request's
+     tests on `main`'s code and passes only if one fails there; it is not
+     required either.
    - Approve: Files changed, Review changes, Approve, Submit review.
    - Merge: Merge pull request, then Confirm merge. The repo allows merge
      commits only.
@@ -324,8 +329,10 @@ screen open.
 6. The second pull request (the person, on GitHub): the "Left behind" link in
    the thread, from a `check/...` branch. When the fix merged, GitHub deleted
    the fix branch and moved this pull request onto `main`, so its base now
-   shows `main`. Wait until its checks are green, then approve and merge it as
-   in step 4. Staging deploys once more (about 30 s after the merge in
+   shows `main`. Wait for RESOLVED and for its checks to be green, then
+   approve and merge it as in step 4. Merged earlier, it cancels CI on the
+   fix's merge commit, and RESOLVED waits for this one's CI as well
+   (rehearsal 3). Staging deploys once more (about 30 s after the merge in
    rehearsal 2); the alert stays resolved and the monitor posts nothing more.
 7. `./demo.sh times` and record the timings.
 8. `./demo.sh reset --yes`. It ends with a doctor run that must pass.

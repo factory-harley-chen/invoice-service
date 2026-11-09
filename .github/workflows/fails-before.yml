@@ -1,0 +1,29 @@
+name: Fails before the fix
+
+"on":
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  fails-before:
+    name: New test fails without the fix
+    # Only fix pull requests carry a test that must fail on main's code. Not a
+    # required check: the ruleset requires "Lint, typecheck and test" only.
+    if: startsWith(github.head_ref, 'fix/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run the pull request's tests on main's code
+        run: node scripts/fails-before.ts "origin/${{ github.base_ref }}"

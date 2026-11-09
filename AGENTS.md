@@ -37,8 +37,10 @@ relative imports.
 - `demo/`: demo tooling (`./demo.sh`, the deploy watcher, the loop screen).
   `demo/.env` and `demo/state/` are git-ignored. See `SETUP.md`.
 - `scripts/`: `screenshot.ts` serves this checkout and saves a picture of an
-  invoice page; `evidence.ts` publishes before and after pictures for a pull
-  request body.
+  invoice page; `test-picture.ts` runs a test file and saves a picture of its
+  output; `evidence.ts` publishes the before and after pictures for a pull
+  request body; `fails-before.ts` runs a pull request's tests on main's code
+  (the "New test fails without the fix" check).
 - `.factory/skills/incident-fix/SKILL.md`: the process to follow when an
   invoice alert starts a run.
 - Tests sit next to the code as `*.test.ts`. `npm run check` covers `src/`,
