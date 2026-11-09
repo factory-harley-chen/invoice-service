@@ -21,7 +21,9 @@ export const maxLines = 60;
 
 /** A terminal window showing a command and its output, as one HTML page. */
 export function terminalPage(command: string, output: string, title = 'invoice-service'): string {
-  const lines = output.replace(ansi, '').replace(/\s+$/, '').split('\n');
+  // Vitest draws its separator lines with U+23AF, which the fonts on GitHub's
+  // Ubuntu runners lack; U+2500 looks the same and every monospace font has it.
+  const lines = output.replace(ansi, '').replace(/⎯/g, '─').replace(/\s+$/, '').split('\n');
   const shown = lines.slice(0, maxLines).map(colourLine).join('\n');
   const more = lines.length > maxLines ? `\n<span class="dim">… ${lines.length - maxLines} more lines</span>` : '';
   return `<!doctype html>
