@@ -8,6 +8,7 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve, sep } from 'node:path';
 import { USAGE, describe, loadConfig, parseArgs } from './config.ts';
+import { readHeaders } from './cors.ts';
 import type { Args, Config } from './config.ts';
 import { currentAlert, derive, runActive } from './rules.ts';
 import { holdRead, readStaging, releaseView, rollOut, rollOutRequestError } from './release.ts';
@@ -116,7 +117,7 @@ async function handleRollOut(req: IncomingMessage, res: ServerResponse): Promise
 const server = createServer((req, res) => {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
   if (path === '/events') {
-    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', ...readHeaders(req.method, req.headers.origin) });
     res.write('retry: 1000\n\n');
     const msg = push();
     if (msg !== '') res.write(msg);
@@ -136,7 +137,7 @@ const server = createServer((req, res) => {
     return;
   }
   if (path === '/state') {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...readHeaders(req.method, req.headers.origin) });
     res.end(JSON.stringify({ state: latest, clock: { virtualMs: virtualNow(), speed } }));
     return;
   }
