@@ -48,7 +48,7 @@ export function buildInvoice(booking: Booking, rates: RateCard, billing: Billing
     if (price === undefined) {
       throw new Error(`No ${currency} price for "${item}"`);
     }
-    const unitPrice = parseAmount(price);
+    const unitPrice = parseAmount(price, currency);
     return {
       item,
       unit: rate.unit,
