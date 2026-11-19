@@ -1,5 +1,6 @@
 import type { BillingConfig, RateCard } from './config.ts';
 import type { Booking } from './data/bookings.ts';
+import { currencyExponent } from './currencies.ts';
 import { formatAmount } from './format.ts';
 import { parseAmount } from './money.ts';
 
@@ -48,7 +49,7 @@ export function buildInvoice(booking: Booking, rates: RateCard, billing: Billing
     if (price === undefined) {
       throw new Error(`No ${currency} price for "${item}"`);
     }
-    const unitPrice = parseAmount(price);
+    const unitPrice = parseAmount(price, currencyExponent(currency));
     return {
       item,
       unit: rate.unit,
